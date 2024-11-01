@@ -1,0 +1,219 @@
+---
+title: "MappingCA17"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+To start with, load the packages we need.
+
+```{r chunk01, results='hide'}
+library(sf)
+library(dplyr)
+library(ggplot2)
+```
+
+Define the common directory where we'll save local copies of the things we might want to use in other notebooks.
+
+```{r chunk02}
+my_data_dir <- rappdirs::user_data_dir(appauthor = "kunalbhatt", appname = "MappingCA17")
+if (!dir.exists(my_data_dir)) dir.create(my_data_dir, recursive = TRUE)
+tools::file_path_as_absolute(my_data_dir)
+
+```
+
+Load the shapefile with the California Congressional district boundaries that we downloaded from redistrictingdatahub.org
+
+```{r chunk03, cache = TRUE}
+ca_congdst_sf <- sf::st_read("ca_cong_adopted_2021/CD_Final 2021-12-20.shp")
+
+nrow(ca_congdst_sf)
+head(ca_congdst_sf)
+```
+
+Given that we know that California currently has 52 districts, this appears to be consistent.
+
+Let's plot the district boundaries using the geometries we just loaded from the shapefile
+
+```{r chunk04, cache = TRUE}
+ggplot(ca_congdst_sf) + 
+  geom_sf() + 
+  labs(title = "CA Congressional Districts, 2021")
+
+```
+
+Let's pull the CA-17 district geometries
+
+```{r chunk05, cache = TRUE}
+ca17 <- dplyr::filter(ca_congdst_sf, DISTRICT == 17)
+
+```
+
+Let's plot CA-17
+
+```{r chunk06, cache = TRUE}
+ggplot(ca17) + 
+  geom_sf() + 
+  labs(title = "CA Congressional District 17")
+
+```
+
+We are interested in the precinct boundaries. Now load the shapefile with the Illinois precinct boundaries that we downloaded from redistricting
+
+```{r chunk07, cache = TRUE}
+ca_prec_2020_sf <- sf::st_read("ca_2020/ca_2020.shp")
+
+nrow(ca_prec_2020_sf)
+head(ca_prec_2020_sf)
+
+```
+
+Let's look at all the column names in this table to see what's in the table
+
+```{r chunk08, cache = TRUE}
+
+names(ca_prec_2020_sf)
+
+```
+
+```{r chunk09, cache = TRUE}
+ca17_prec <- dplyr::filter(ca_prec_2020_sf, CDDIST == 17)
+head(ca17_prec)
+```
+
+```{r chunk10, cache = TRUE}
+ca17_prec_sel <- ca17_prec %>% select(
+                                      CNTY_CODE,
+                                      COUNTY,
+                                      SRPREC,
+                                      CDDIST,
+                                      G20PREDBID,
+                                      G20PRERTRU,
+                                      G20PRELJOR,
+                                      G20PREGHAW,
+                                      G20PREAFUE,
+                                      G20PREPLAR,
+                                      geometry)
+head(ca17_prec_sel)
+
+```
+
+```{r chunk11, cache = TRUE}
+ggplot(ca17_prec_sel) + 
+  geom_sf() + 
+  geom_sf(data = ca17, fill = NA, lwd = 1.2) +
+  labs(title = "Precincts in CA Congressional District 17")
+
+```
+
+This map does appear to have some precincts that extend outside of the CA-17 Congressional district boundary. This needs further investigation.
+
+From the README.txt: Certain precincts are split by congressional or legislative districts and have votes for more than one district. These precincts are split by the district geographies. In certain cases, votes appear in precincts for districts that do not intersect with the precinct itself.
+
+The above confirms that precincts can be split by congressional districts so the map reflects this.
+
+```{r chunk12, cache = TRUE}
+ca17_prec_win <- ca17_prec_sel %>% mutate(
+  Winner = case_when (
+    G20PREDBID > G20PRERTRU ~ "D",
+    G20PRERTRU < G20PREDBID ~ "R",
+    TRUE ~ "T") )
+
+head(ca17_prec_win)
+
+```
+
+=
+
+Lets maps the winners
+
+```{r chunk13, cache = TRUE}
+ggplot(ca17_prec_win, aes(color = Winner)) + 
+  geom_sf() + 
+  scale_color_manual(values = c("D" = "blue",
+                                "R" = "red",
+                                "T" = "green"))
+  
+
+
+```
+
+```{r chunk14, cache = TRUE}
+ggplot(ca17_prec_win, aes(fill = Winner)) + 
+  geom_sf() 
+
+```
+
+```{r chunk15, cache = TRUE}
+ggplot(ca17_prec_win, aes(fill = Winner)) + 
+  geom_sf() + 
+  scale_fill_manual(values = c("D" = "blue",
+                                "R" = "red",
+                                "T" = "green"))
+
+
+```
+
+```{r chunk16, cache = TRUE}
+ggplot(ca17_prec_win, aes(fill = Winner, color = "white")) + 
+  geom_sf() + 
+  scale_fill_manual(values = c("D" = "blue",
+                                "R" = "red",
+                                "T" = "green"))
+  
+
+```
+
+```{r chunk16, cache = TRUE}
+ggplot(ca17_prec_win, aes(fill = Winner)) + 
+  geom_sf() + 
+  scale_fill_manual(values = c("D" = "blue",
+                                "R" = "red",
+                                "T" = "green"))+
+  geom_sf(data = ca17, fill = NA, lwd = 0.8) +
+  labs(title = "2020 CA Cong District 17 Election Results by Precinct")
+```
+
+```{r chunk17 cache=TRUE}
+totalDvotes <- sum(ca17_prec_win$G20PREDBID)
+totalRvotes <- sum(ca17_prec_win$G20PRERTRU)
+cat(totalDvotes, "votes for the Democrat\n")
+cat(totalRvotes, "votes for the Republican\n")
+
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
+
+```{}
+```
